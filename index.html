@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juragan Cuan SMK - Game Pengelolaan Keuangan KIK</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Fredoka (ceria & bulat) & Nunito (mudah dibaca) -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Tone.js untuk efek suara interaktif tanpa file eksternal -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Canvas Confetti untuk animasi kemenangan -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #FFDEE9 0%, #B5FFFC 50%, #FFF6B7 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        h1, h2, h3, .font-title {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Animasi Melayang & Memantul */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(3deg); }
+        }
+        .animate-float {
+            animation: float 3.5s ease-in-out infinite;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            70% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+            50% { box-shadow: 0 0 20px 8px rgba(250, 204, 21, 0.4); }
+        }
+        .glow-gold {
+            animation: pulseGlow 2s infinite;
+        }
+
+        /* Tombol 3D Arcade Style */
+        .btn-arcade {
+            transition: all 0.15s ease;
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+        }
+        .btn-arcade:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        /* Latar Belakang Dekorasi Mengambang */
+        .bg-shape {
+            position: fixed;
+            z-index: -1;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        /* Custom Scrollbar untuk Modal Materi */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800">
+
+    <!-- Elemen Dekorasi Latar Belakang -->
+    <div class="bg-shape text-6xl top-10 left-10 animate-float" style="animation-delay: 0s;">💰</div>
+    <div class="bg-shape text-5xl top-24 right-14 animate-float" style="animation-delay: 1s;">📊</div>
+    <div class="bg-shape text-6xl bottom-16 left-16 animate-float" style="animation-delay: 2s;">🧋</div>
+    <div class="bg-shape text-5xl bottom-24 right-12 animate-float" style="animation-delay: 1.5s;">🧁</div>
+
+    <!-- HEADER / NAVBAR -->
+    <header class="w-full max-w-5xl mx-auto px-4 pt-4 pb-2 flex flex-wrap items-center justify-between gap-3 z-10">
+        <div class="flex items-center gap-3 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-md border-2 border-indigo-200">
+            <span class="text-3xl animate-bounce">🚀</span>
+            <div>
+                <h1 class="text-lg sm:text-xl font-bold text-indigo-700 leading-tight">Juragan Cuan SMK</h1>
+                <p class="text-xs font-bold text-pink-500">Mapel KIK • Pengelolaan Keuangan</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+            <!-- Skor & Nyawa -->
+            <div id="hud-stats" class="hidden flex items-center gap-2 sm:gap-3 bg-white/90 backdrop-blur-md px-3 sm:px-4 py-2 rounded-2xl shadow-md border-2 border-amber-200">
+                <div class="flex items-center gap-1 text-amber-600 font-extrabold text-sm sm:text-base">
+                    <span>⭐</span>
+                    <span id="score-display">0</span>
+                </div>
+                <div class="h-5 w-0.5 bg-slate-200"></div>
+                <div class="flex items-center gap-1 text-rose-500 font-extrabold text-sm sm:text-base" id="lives-display">
+                    ❤️❤️❤️
+                </div>
+            </div>
+
+            <!-- Tombol Buku Saku Materi -->
+            <button onclick="toggleMateriModal(true)" class="btn-arcade bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600 text-white font-bold px-3 sm:px-4 py-2 rounded-2xl text-sm flex items-center gap-1.5 border-b-4 border-blue-700">
+                <span>📖</span>
+                <span class="hidden sm:inline">Buku Saku</span>
+            </button>
+
+            <!-- Tombol Suara -->
+            <button id="sound-toggle" onclick="toggleSound()" class="btn-arcade bg-white hover:bg-slate-50 text-slate-700 font-bold p-2.5 rounded-2xl text-sm border-2 border-slate-200" title="Suara Efek">
+                🔊
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN GAME CONTAINER -->
+    <main class="flex-grow flex items-center justify-center p-4 z-10">
+        <div class="w-full max-w-4xl">
+
+            <!-- SCREEN 1: MENU UTAMA -->
+            <section id="screen-home" class="bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-10 shadow-2xl border-4 border-indigo-300 text-center animate-pop">
+                <div class="inline-block bg-amber-100 text-amber-700 font-extrabold px-4 py-1.5 rounded-full text-xs sm:text-sm mb-4 border-2 border-amber-300">
+                    ✨ SIMULASI WIRAUSAHA SISWA SMK ✨
+                </div>
+                
+                <div class="flex justify-center gap-4 text-5xl sm:text-6xl mb-4">
+                    <span class="animate-float" style="animation-delay: 0.1s;">🧋</span>
+                    <span class="animate-float" style="animation-delay: 0.3s;">🍫</span>
+                    <span class="animate-float" style="animation-delay: 0.5s;">📸</span>
+                    <span class="animate-float" style="animation-delay: 0.7s;">🥗</span>
+                </div>
+
+                <h2 class="text-3xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-pink-500 to-amber-500 mb-3">
+                    Jadilah Pengusaha Muda Cerdas!
+                </h2>
+                <p class="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto mb-8 font-semibold">
+                    Bantu Rina dan teman-teman SMK mengelola usaha sekolah! Pisahkan uang kas, hitung HPP & Laba, susun pembukuan, dan taklukkan risiko keuangan!
+                </p>
+
+                <!-- Kartu 4 Level Misi -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 text-left">
+                    <div class="bg-gradient-to-br from-pink-50 to-rose-100 p-4 rounded-2xl border-2 border-rose-200 flex items-center gap-3">
+                        <div class="text-3xl bg-white p-2.5 rounded-xl shadow-sm">👛</div>
+                        <div>
+                            <span class="text-xs font-extrabold text-rose-500 uppercase">Misi 1</span>
+                            <h3 class="font-bold text-slate-800">Pemilah Kas Sakti</h3>
+                            <p class="text-xs text-slate-600">Pisahkan Uang Pribadi & Uang Usaha</p>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-sky-50 to-cyan-100 p-4 rounded-2xl border-2 border-cyan-200 flex items-center gap-3">
+                        <div class="text-3xl bg-white p-2.5 rounded-xl shadow-sm">📒</div>
+                        <div>
+                            <span class="text-xs font-extrabold text-cyan-600 uppercase">Misi 2</span>
+                            <h3 class="font-bold text-slate-800">Jagoan Pembukuan & Arus Kas</h3>
+                            <p class="text-xs text-slate-600">Catat Kas Masuk, Keluar & Kas Akhir</p>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-amber-50 to-yellow-100 p-4 rounded-2xl border-2 border-amber-200 flex items-center gap-3">
+                        <div class="text-3xl bg-white p-2.5 rounded-xl shadow-sm">🧮</div>
+                        <div>
+                            <span class="text-xs font-extrabold text-amber-600 uppercase">Misi 3</span>
+                            <h3 class="font-bold text-slate-800">Kalkulator HPP & Laba</h3>
+                            <p class="text-xs text-slate-600">Hitung HPP, Laba Kotor & Laba Bersih</p>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-emerald-50 to-teal-100 p-4 rounded-2xl border-2 border-emerald-200 flex items-center gap-3">
+                        <div class="text-3xl bg-white p-2.5 rounded-xl shadow-sm">🛡️</div>
+                        <div>
+                            <span class="text-xs font-extrabold text-emerald-600 uppercase">Misi 4</span>
+                            <h3 class="font-bold text-slate-800">Detektif Risiko & Dapur Sehat</h3>
+                            <p class="text-xs text-slate-600">Solusi Risiko & Studi Kasus Akhir</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button onclick="startGame()" class="btn-arcade w-full sm:w-auto bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-title text-xl sm:text-2xl px-10 py-4 rounded-2xl border-b-4 border-indigo-800 flex items-center justify-center gap-3 glow-gold">
+                        <span>🎮</span> MULAI PETUALANGAN
+                    </button>
+                    <button onclick="toggleMateriModal(true)" class="btn-arcade w-full sm:w-auto bg-amber-400 hover:bg-amber-500 text-amber-950 font-title text-lg px-6 py-4 rounded-2xl border-b-4 border-amber-600 flex items-center justify-center gap-2">
+                        <span>📚</span> Pelajari Materi Dulu
+                    </button>
+                </div>
+            </section>
+
+            <!-- SCREEN 2: AREA PERMAINAN DINAMIS -->
+            <section id="screen-game" class="hidden bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-8 shadow-2xl border-4 border-indigo-300 animate-pop">
+                <!-- Progress Bar Misi -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center text-xs sm:text-sm font-extrabold text-slate-500 mb-1.5">
+                        <span id="mission-badge" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">MISI 1 DARI 4</span>
+                        <span id="step-counter">Tantangan 1 / 5</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-3.5 rounded-full overflow-hidden p-0.5">
+                        <div id="progress-bar" class="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 h-full rounded-full transition-all duration-500" style="width: 10%;"></div>
+                    </div>
+                </div>
+
+                <!-- Konten Soal / Tantangan akan dirender di sini oleh JS -->
+                <div id="game-stage"></div>
+            </section>
+
+            <!-- SCREEN 3: LAYAR HASIL & SERTIFIKAT -->
+            <section id="screen-result" class="hidden bg-white/95 backdrop-blur-md rounded-3xl p-6 sm:p-10 shadow-2xl border-4 border-amber-300 text-center animate-pop">
+                <div id="result-trophy" class="text-7xl sm:text-8xl mb-4 animate-bounce">🏆</div>
+                <h2 id="result-title" class="text-3xl sm:text-4xl font-bold text-indigo-700 mb-2">Selamat, Juragan Muda!</h2>
+                <p id="result-subtitle" class="text-slate-600 font-semibold mb-6">Kamu telah menaklukkan seluruh tantangan pengelolaan keuangan KIK!</p>
+
+                <!-- Kartu Rapor Nilai -->
+                <div class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-2 border-indigo-200 rounded-2xl p-6 max-w-md mx-auto mb-8 shadow-inner">
+                    <div class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Total Skor Cuan</div>
+                    <div id="final-score" class="text-5xl font-title font-bold text-amber-500 mb-3">0</div>
+                    <div id="final-rank" class="inline-block bg-emerald-500 text-white font-extrabold px-4 py-1.5 rounded-full text-sm shadow">
+                        Predikat: CEO Muda Andal 🌟
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <button onclick="startGame()" class="btn-arcade bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-title text-xl px-8 py-3.5 rounded-2xl border-b-4 border-teal-700">
+                        🔄 Main Lagi
+                    </button>
+                    <button onclick="goHome()" class="btn-arcade bg-slate-200 hover:bg-slate-300 text-slate-700 font-title text-xl px-8 py-3.5 rounded-2xl border-b-4 border-slate-400">
+                        🏠 Menu Utama
+                    </button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- FEEDBACK POPUP BANNER (Menggantikan alert) -->
+    <div id="feedback-overlay" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div id="feedback-card" class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl border-4 animate-pop">
+            <div id="fb-icon" class="text-6xl mb-3">🎉</div>
+            <h3 id="fb-title" class="text-2xl font-bold mb-2">Tepat Sekali!</h3>
+            <p id="fb-desc" class="text-slate-600 font-semibold text-sm sm:text-base mb-6 leading-relaxed"></p>
+            <button id="fb-next-btn" onclick="nextChallenge()" class="btn-arcade w-full bg-indigo-600 hover:bg-indigo-700 text-white font-title text-lg py-3 rounded-2xl border-b-4 border-indigo-900">
+                Lanjut Misi ➡️
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL BUKU SAKU MATERI KIK -->
+    <div id="materi-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-white rounded-3xl w-full max-w-3xl max-h-[88vh] flex flex-col shadow-2xl border-4 border-cyan-400 animate-pop">
+            <!-- Header Modal -->
+            <div class="p-4 sm:p-5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-t-2xl flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">📖</span>
+                    <h3 class="text-lg sm:text-xl font-bold">Buku Saku: Pengelolaan Keuangan (KIK)</h3>
+                </div>
+                <button onclick="toggleMateriModal(false)" class="bg-white/20 hover:bg-white/30 text-white font-bold px-3 py-1 rounded-xl text-lg">✕</button>
+            </div>
+
+            <!-- Tab Navigasi Materi -->
+            <div class="flex overflow-x-auto bg-slate-100 p-2 gap-2 border-b border-slate-200 text-xs sm:text-sm font-bold">
+                <button onclick="switchTab(1)" id="tab-btn-1" class="tab-btn bg-cyan-500 text-white px-3 py-2 rounded-xl whitespace-nowrap">1. Prinsip & Kas</button>
+                <button onclick="switchTab(2)" id="tab-btn-2" class="tab-btn bg-white text-slate-600 px-3 py-2 rounded-xl whitespace-nowrap">2. Pembukuan & Arus Kas</button>
+                <button onclick="switchTab(3)" id="tab-btn-3" class="tab-btn bg-white text-slate-600 px-3 py-2 rounded-xl whitespace-nowrap">3. HPP & Laba</button>
+                <button onclick="switchTab(4)" id="tab-btn-4" class="tab-btn bg-white text-slate-600 px-3 py-2 rounded-xl whitespace-nowrap">4. Risiko & Studi Kasus</button>
+            </div>
+
+            <!-- Isi Konten Materi -->
+            <div id="materi-content" class="p-5 sm:p-6 overflow-y-auto space-y-4 text-sm sm:text-base text-slate-700 leading-relaxed">
+                <!-- Diisi dinamis oleh JS -->
+            </div>
+
+            <!-- Footer Modal -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 rounded-b-2xl text-right">
+                <button onclick="toggleMateriModal(false)" class="btn-arcade bg-cyan-500 hover:bg-cyan-600 text-white font-bold px-6 py-2.5 rounded-xl border-b-4 border-cyan-700">
+                    Siap Main! 👍
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="text-center py-3 text-xs font-bold text-slate-600/80 z-10">
+        Media Pembelajaran Interaktif SMK • Kreativitas, Inovasi, dan Kewirausahaan (KIK)
+    </footer>
+
+    <script>
+        // ==========================================
+        // 1. SISTEM AUDIO INTERAKTIF (TONE.JS)
+        // ==========================================
+        let soundEnabled = true;
+        let synth = null;
+
+        function initAudio() {
+            if (!synth && typeof Tone !== 'undefined') {
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -8;
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                const now = Tone.now();
+                if (type === 'click') {
+                    synth.triggerAttackRelease("C5", "32n", now);
+                } else if (type === 'correct') {
+                    synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "16n", now);
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease(["E3", "Eb3"], "8n", now);
+                } else if (type === 'win') {
+                    synth.triggerAttackRelease("C5", "16n", now);
+                    synth.triggerAttackRelease("E5", "16n", now + 0.1);
+                    synth.triggerAttackRelease("G5", "16n", now + 0.2);
+                    synth.triggerAttackRelease("C6", "8n", now + 0.3);
+                }
+            } catch (e) {
+                // Abaikan jika browser memblokir autoplay audio sebelum interaksi
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-toggle').innerText = soundEnabled ? '🔊' : '🔇';
+            if (soundEnabled) playSound('click');
+        }
+
+        // ==========================================
+        // 2. DATA MATERI BUKU SAKU
+        // ==========================================
+        const materiTabs = {
+            1: `
+                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-200">
+                    <h4 class="font-bold text-indigo-800 text-lg mb-1">💡 Pengelolaan Keuangan Usaha</h4>
+                    <p>Proses merencanakan, mencatat, mengendalikan, dan mengevaluasi uang usaha agar bisnis sehat. <strong>Intinya:</strong> uang masuk > uang keluar, setiap rupiah tercatat, dan keputusan berbasis data.</p>
+                </div>
+                <h4 class="font-bold text-slate-800 text-lg">5 Prinsip Utama:</h4>
+                <ul class="space-y-2">
+                    <li class="bg-pink-50 p-3 rounded-xl border border-pink-200"><strong>1. Pisahkan uang pribadi & usaha:</strong> Uang jualan kue tidak boleh langsung dipakai beli kuota pribadi!</li>
+                    <li class="bg-amber-50 p-3 rounded-xl border border-amber-200"><strong>2. Catat setiap transaksi:</strong> Beli telur, jual 20 kue, hingga bayar listrik wajib dicatat.</li>
+                    <li class="bg-cyan-50 p-3 rounded-xl border border-cyan-200"><strong>3. Kelola kas secara disiplin:</strong> Sisihkan uang untuk bahan baku minggu depan.</li>
+                    <li class="bg-emerald-50 p-3 rounded-xl border border-emerald-200"><strong>4. Hitung biaya dengan jujur:</strong> Harga jual harus menutup seluruh biaya, bukan asal ikut pesaing.</li>
+                    <li class="bg-purple-50 p-3 rounded-xl border border-purple-200"><strong>5. Evaluasi berkala:</strong> Tinjau laba, kas, dan risiko tiap minggu/bulan.</li>
+                </ul>
+            `,
+            2: `
+                <div class="bg-cyan-50 p-4 rounded-2xl border border-cyan-200">
+                    <h4 class="font-bold text-cyan-800 text-lg mb-1">📒 Pembukuan & Arus Kas</h4>
+                    <p>Untuk usaha siswa, cukup gunakan <strong>Buku Kas Pemasukan</strong> (uang hasil jualan) dan <strong>Buku Kas Pengeluaran</strong> (bahan baku, kemasan, promosi, dll).</p>
+                </div>
+                <div class="bg-amber-100 p-4 rounded-2xl border-2 border-amber-300 text-center font-bold text-amber-900">
+                    Rumus Arus Kas:<br>
+                    <span class="text-lg">Arus Kas Bersih = Total Kas Masuk − Total Kas Keluar</span><br>
+                    <span class="text-sm font-normal">Kas Akhir = Kas Awal + Kas Masuk − Kas Keluar</span>
+                </div>
+                <p><strong>Ingat!</strong> Laba berbeda dengan Arus Kas. Usaha bisa mencatat laba, tapi tetap kehabisan uang tunai jika pelanggan banyak yang berutang (piutang) atau stok menumpuk berlebihan.</p>
+            `,
+            3: `
+                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                    <h4 class="font-bold text-amber-800 text-lg mb-1">🧮 Harga Pokok Penjualan (HPP) & Laba</h4>
+                    <p><strong>HPP</strong> adalah seluruh biaya langsung untuk menghasilkan produk (bahan baku, kemasan, tenaga produksi, listrik/gas produksi).</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 font-bold text-sm">
+                    <div class="bg-indigo-100 p-3.5 rounded-xl border border-indigo-300 text-indigo-900">
+                        📌 HPP per Unit = Total Biaya Produksi ÷ Jumlah Produk
+                    </div>
+                    <div class="bg-emerald-100 p-3.5 rounded-xl border border-emerald-300 text-emerald-900">
+                        📌 Laba Kotor = Penjualan − HPP
+                    </div>
+                    <div class="bg-pink-100 p-3.5 rounded-xl border border-pink-300 text-pink-900 sm:col-span-2 text-center">
+                        📌 Laba Bersih = Laba Kotor − Biaya Operasional (Promosi, Transportasi, dll)
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500">Contoh: 100 brownies biaya produksi Rp450.000 → HPP = Rp4.500/pcs. Dijual Rp8.000 → Laba kotor Rp3.500/pcs.</p>
+            `,
+            4: `
+                <div class="bg-rose-50 p-4 rounded-2xl border border-rose-200">
+                    <h4 class="font-bold text-rose-800 text-lg mb-1">🛡️ Manajemen Risiko Keuangan</h4>
+                    <ul class="list-disc pl-5 space-y-1 text-sm">
+                        <li><strong>Kas tidak cukup:</strong> Sediakan dana cadangan usaha.</li>
+                        <li><strong>Piutang macet:</strong> Batasi kredit & catat piutang pelanggan.</li>
+                        <li><strong>Harga bahan naik:</strong> Cari pemasok alternatif & sesuaikan harga.</li>
+                        <li><strong>Bahan terbuang (tak laku):</strong> Gunakan sistem Pre-Order (PO) WA & produksi bertahap.</li>
+                    </ul>
+                </div>
+                <div class="bg-emerald-50 p-4 rounded-2xl border border-emerald-200">
+                    <h4 class="font-bold text-emerald-800 text-base mb-1">🥗 Kunci Studi Kasus "Dapur Sehat":</h4>
+                    <p class="text-sm">Modal Awal Rp500.000 | Penjualan Rp2.750.000 | Total Kas Keluar Rp1.800.000 → <strong>Kas Akhir Rp1.450.000</strong> & <strong>Laba Bersih Rp950.000</strong>.</p>
+                </div>
+            `
+        };
+
+        function toggleMateriModal(show) {
+            playSound('click');
+            const modal = document.getElementById('materi-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+                switchTab(1);
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function switchTab(num) {
+            playSound('click');
+            document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+                if (idx + 1 === num) {
+                    btn.className = "tab-btn bg-cyan-500 text-white px-3 py-2 rounded-xl whitespace-nowrap shadow-sm";
+                } else {
+                    btn.className = "tab-btn bg-white text-slate-600 hover:bg-slate-200 px-3 py-2 rounded-xl whitespace-nowrap";
+                }
+            });
+            document.getElementById('materi-content').innerHTML = materiTabs[num];
+        }
+
+        // ==========================================
+        // 3. BANK TANTANGAN / LEVEL GAME (10 TAHAP SERU)
+        // ==========================================
+        const challenges = [
+            // --- MISI 1: PEMILAH KAS SAKTI (Prinsip Pemisahan Keuangan) ---
+            {
+                mission: "MISI 1: PEMILAH KAS SAKTI",
+                type: "sorter",
+                title: "Pisahkan Uang Usaha & Uang Pribadi!",
+                instruction: "Klik setiap kartu transaksi di bawah ini untuk memasukkannya ke dompet yang tepat!",
+                items: [
+                    { id: 1, text: "Hasil jualan 20 cup Es Teh (Rp100.000)", icon: "🧋", target: "usaha" },
+                    { id: 2, text: "Beli kuota internet untuk main game pribadi", icon: "🎮", target: "pribadi" },
+                    { id: 3, text: "Beli gula, es batu & cup plastik usaha", icon: "🧊", target: "usaha" },
+                    { id: 4, text: "Uang jajan bakso sepulang sekolah", icon: "🍜", target: "pribadi" }
+                ],
+                explanation: "Hebat! Prinsip pertama pengelolaan keuangan adalah memisahkan kas usaha dan kas pribadi agar modal usaha tidak habis terpakai kebutuhan pribadi."
+            },
+            {
+                mission: "MISI 1: PEMILAH KAS SAKTI",
+                type: "quiz",
+                badge: "Prinsip Keuangan",
+                icon: "💡",
+                question: "Mengapa banyak usaha siswa maupun UMKM mengalami kegagalan meskipun produknya enak dan laris?",
+                options: [
+                    { text: "Karena harga jualnya selalu lebih murah dari pesaing", correct: false },
+                    { text: "Karena kas habis terpakai dan pemilik tidak mencatat biaya serta labanya", correct: true },
+                    { text: "Karena tidak membuka cabang di luar kota sejak hari pertama", correct: false }
+                ],
+                explanation: "Tepat! Banyak usaha gagal bukan karena produknya buruk, melainkan karena kas habis atau pemilik tidak tahu pasti berapa biaya dan labanya."
+            },
+
+            // --- MISI 2: JAGOAN PEMBUKUAN & ARUS KAS ---
+            {
+                mission: "MISI 2: PEMBUKUAN & ARUS KAS",
+                type: "bookkeeping",
+                title: "Klasifikasi Buku Kas Usaha Siswa",
+                instruction: "Tentukan apakah transaksi berikut masuk ke Buku Kas Pemasukan atau Buku Kas Pengeluaran!",
+                items: [
+                    { id: 1, text: "Penjualan jasa desain poster Rp150.000", icon: "🎨", target: "masuk" },
+                    { id: 2, text: "Beli kemasan box kue Rp25.000", icon: "📦", target: "keluar" },
+                    { id: 3, text: "Kuota internet khusus promosi IG Rp20.000", icon: "📱", target: "keluar" },
+                    { id: 4, text: "Penjualan 15 roti manis Rp75.000", icon: "🥐", target: "masuk" }
+                ],
+                explanation: "Mantap! Semua uang dari penjualan masuk ke Buku Kas Pemasukan, sedangkan pembelian bahan, kemasan, dan promosi masuk Buku Kas Pengeluaran."
+            },
+            {
+                mission: "MISI 2: PEMBUKUAN & ARUS KAS",
+                type: "calculator",
+                icon: "💸",
+                title: "Hitung Kas Akhir Mingguan!",
+                story: "Usaha Es Teh Rina memiliki <strong>Kas Awal Rp500.000</strong>. Minggu ini ada <strong>Penjualan Tunai Rp2.000.000</strong>, sedangkan <strong>Total Kas Keluar Rp1.250.000</strong>.",
+                formulaHint: "Kas Akhir = Kas Awal + Kas Masuk − Kas Keluar",
+                question: "Berapakah sisa Kas Akhir usaha Rina?",
+                choices: ["Rp750.000", "Rp1.250.000", "Rp1.750.000", "Rp2.500.000"],
+                correctAnswer: "Rp1.250.000",
+                explanation: "Perhitungan akurat! Rp500.000 (Kas Awal) + Rp2.000.000 (Masuk) − Rp1.250.000 (Keluar) = Rp1.250.000. Arus kas bertambah Rp750.000!"
+            },
+            {
+                mission: "MISI 2: PEMBUKUAN & ARUS KAS",
+                type: "quiz",
+                badge: "Analisis Arus Kas",
+                icon: "📉",
+                question: "Usaha keripik kelas XI mencatat laba di pembukuan, tetapi uang tunai di kotak kas habis. Apa penyebab paling mungkin menurut materi arus kas?",
+                options: [
+                    { text: "Terlalu banyak pelanggan yang berutang (belum bayar) atau uang habis untuk menimbun stok", correct: true },
+                    { text: "Harga jual produk terlalu tinggi dibandingkan biaya produksi", correct: false },
+                    { text: "Pemilik usaha rajin mencatat setiap transaksi harian", correct: false }
+                ],
+                explanation: "Benar sekali! Laba berbeda dengan arus kas. Piutang pelanggan yang belum dibayar atau pembelian stok berlebihan membuat kas tunai menipis."
+            },
+
+            // --- MISI 3: KALKULATOR HPP & LABA ---
+            {
+                mission: "MISI 3: KALKULATOR HPP & LABA",
+                type: "calculator",
+                icon: "🍫",
+                title: "Hitung HPP Kue Brownies!",
+                story: "Kelompok siswa memproduksi <strong>100 potong brownies</strong> dengan rincian: Bahan baku Rp300.000, Kemasan Rp50.000, Listrik & gas Rp30.000, dan Tenaga produksi Rp70.000 (Total = Rp450.000).",
+                formulaHint: "HPP per Unit = Total Biaya Produksi ÷ Jumlah Produk",
+                question: "Berapakah Harga Pokok Penjualan (HPP) untuk 1 potong brownies?",
+                choices: ["Rp3.500", "Rp4.000", "Rp4.500", "Rp5.000"],
+                correctAnswer: "Rp4.500",
+                explanation: "Tepat! Total biaya produksi Rp450.000 ÷ 100 brownies = Rp4.500 per potong. Jadi harga jual wajib di atas Rp4.500 agar tidak rugi!"
+            },
+            {
+                mission: "MISI 3: KALKULATOR HPP & LABA",
+                type: "calculator",
+                icon: "💰",
+                title: "Hitung Laba Bersih Brownies!",
+                story: "100 brownies laku terjual dengan total penjualan <strong>Rp800.000</strong>. Diketahui total <strong>HPP adalah Rp450.000</strong>, dan <strong>Total Biaya Operasional</strong> (promosi, transport, kemasan tambahan) sebesar <strong>Rp100.000</strong>.",
+                formulaHint: "Laba Bersih = Penjualan − HPP − Biaya Operasional",
+                question: "Berapakah Laba Bersih yang diperoleh kelompok siswa tersebut?",
+                choices: ["Rp250.000", "Rp350.000", "Rp450.000", "Rp700.000"],
+                correctAnswer: "Rp250.000",
+                explanation: "Luar biasa! Laba Kotor = Rp800.000 − Rp450.000 = Rp350.000. Lalu dikurangi biaya operasional Rp100.000, sehingga Laba Bersih = Rp250.000."
+            },
+            {
+                mission: "MISI 3: KALKULATOR HPP & LABA",
+                type: "calculator",
+                icon: "📸",
+                title: "Laba Usaha Jasa Fotografi Sekolah",
+                story: "Tim fotografi siswa mendapat <strong>Pendapatan Jasa Rp1.500.000</strong>. Biaya yang keluar: Sewa kamera Rp300.000, Transport Rp150.000, Cetak & editing Rp200.000, dan Promosi Rp100.000.",
+                formulaHint: "Laba Bersih = Pendapatan Jasa − Total Seluruh Biaya",
+                question: "Berapakah Laba Bersih jasa fotografi tersebut?",
+                choices: ["Rp650.000", "Rp750.000", "Rp850.000", "Rp950.000"],
+                correctAnswer: "Rp750.000",
+                explanation: "Cerdas! Total biaya = Rp300rb + Rp150rb + Rp200rb + Rp100rb = Rp750.000. Laba bersih = Rp1.500.000 − Rp750.000 = Rp750.000."
+            },
+
+            // --- MISI 4: MANAJEMEN RISIKO & STUDI KASUS DAPUR SEHAT ---
+            {
+                mission: "MISI 4: RISIKO & STUDI KASUS",
+                type: "quiz",
+                badge: "Mitigasi Risiko Usaha",
+                icon: "🧊",
+                question: "Hari pertama jualan minuman dingin, siswa membeli 200 cup bahan baku, tetapi hanya laku 80 cup sehingga sisanya terbuang. Strategi pengendalian risiko terbaik adalah...",
+                options: [
+                    { text: "Menaikkan harga jual 3 kali lipat keesokan harinya", correct: false },
+                    { text: "Menerapkan sistem Pre-Order (PO) via WhatsApp & produksi porsi bertahap", correct: true },
+                    { text: "Berhenti mencatat pengeluaran agar tidak terlihat rugi", correct: false }
+                ],
+                explanation: "Solusi jitu! Pre-Order (PO) melalui WhatsApp dan mengurangi pembelian bahan baku berlebih di awal usaha mencegah kerugian akibat bahan terbuang."
+            },
+            {
+                mission: "MISI 4: STUDI KASUS FINAL",
+                type: "casestudy",
+                title: "Tantangan Akhir: Usaha 'Dapur Sehat'",
+                story: "Kelompok siswa menjual salad buah & jus sehat selama seminggu dengan data:<br>• <strong>Modal Awal:</strong> Rp500.000 &nbsp;|&nbsp; • <strong>Penjualan:</strong> Rp2.750.000<br>• <strong>Pengeluaran:</strong> Bahan Rp1.100.000, Kemasan Rp200.000, Transport Rp150.000, Promosi Rp100.000, Es & Alat Rp250.000.",
+                questions: [
+                    { label: "1. Total Kas Keluar:", options: ["Rp1.550.000", "Rp1.800.000", "Rp1.950.000"], answer: "Rp1.800.000" },
+                    { label: "2. Sisa Kas Akhir:", options: ["Rp950.000", "Rp1.250.000", "Rp1.450.000"], answer: "Rp1.450.000" },
+                    { label: "3. Laba Bersih Usaha:", options: ["Rp750.000", "Rp950.000", "Rp1.150.000"], answer: "Rp950.000" }
+                ],
+                explanation: "Sempurna! Total Kas Keluar = Rp1.800.000. Kas Akhir = Rp500.000 + Rp2.750.000 − Rp1.800.000 = Rp1.450.000. Laba Bersih = Rp2.750.000 − Rp1.800.000 = Rp950.000!"
+            }
+        ];
+
+        // ==========================================
+        // 4. STATE & LOGIKA UTAMA PERMAINAN
+        // ==========================================
+        let currentIdx = 0;
+        let score = 0;
+        let lives = 3;
+        let selectedSorterItem = null;
+        let sortedCount = 0;
+
+        function startGame() {
+            playSound('click');
+            currentIdx = 0;
+            score = 0;
+            lives = 3;
+            updateHUD();
+
+            document.getElementById('screen-home').classList.add('hidden');
+            document.getElementById('screen-result').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('hud-stats').classList.remove('hidden');
+
+            renderChallenge();
+        }
+
+        function goHome() {
+            playSound('click');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-result').classList.add('hidden');
+            document.getElementById('hud-stats').classList.add('hidden');
+            document.getElementById('screen-home').classList.remove('hidden');
+        }
+
+        function updateHUD() {
+            document.getElementById('score-display').innerText = score;
+            const hearts = lives > 0 ? '❤️'.repeat(lives) + '🖤'.repeat(3 - lives) : '💔';
+            document.getElementById('lives-display').innerText = hearts;
+        }
+
+        function renderChallenge() {
+            const ch = challenges[currentIdx];
+            const stage = document.getElementById('game-stage');
+
+            // Update Progress Bar & Badge
+            document.getElementById('mission-badge').innerText = ch.mission;
+            document.getElementById('step-counter').innerText = `Tantangan ${currentIdx + 1} / ${challenges.length}`;
+            const pct = ((currentIdx + 1) / challenges.length) * 100;
+            document.getElementById('progress-bar').style.width = `${pct}%`;
+
+            // Render berdasarkan tipe soal
+            if (ch.type === 'sorter' || ch.type === 'bookkeeping') {
+                renderSorterStage(ch, stage);
+            } else if (ch.type === 'quiz') {
+                renderQuizStage(ch, stage);
+            } else if (ch.type === 'calculator') {
+                renderCalculatorStage(ch, stage);
+            } else if (ch.type === 'casestudy') {
+                renderCaseStudyStage(ch, stage);
+            }
+        }
+
+        // --- RENDER TIPE 1 & 2: INTERACTIVE SORTER (PILAH DOMPET / BUKU KAS) ---
+        function renderSorterStage(ch, stage) {
+            selectedSorterItem = null;
+            sortedCount = 0;
+
+            const isDompet = ch.type === 'sorter';
+            const leftBin = isDompet
+                ? { key: 'usaha', title: 'KAS USAHA', sub: 'Modal, Jualan, Bahan Baku', icon: '🏪', color: 'from-emerald-400 to-teal-500', border: 'border-emerald-600' }
+                : { key: 'masuk', title: 'KAS PEMASUKAN', sub: 'Uang Masuk dari Penjualan', icon: '📥', color: 'from-sky-400 to-blue-500', border: 'border-blue-600' };
+
+            const rightBin = isDompet
+                ? { key: 'pribadi', title: 'UANG PRIBADI', sub: 'Jajan, Kuota Pribadi, Hiburan', icon: '🎒', color: 'from-rose-400 to-pink-500', border: 'border-rose-600' }
+                : { key: 'keluar', title: 'KAS PENGELUARAN', sub: 'Biaya Bahan, Kemasan, Promosi', icon: '📤', color: 'from-amber-400 to-orange-500', border: 'border-orange-600' };
+
+            let itemsHtml = ch.items.map(item => `
+                <button id="sort-item-${item.id}" onclick="selectSortItem(${item.id}, '${item.target}')"
+                    class="sort-card btn-arcade bg-white hover:bg-indigo-50 border-2 border-indigo-200 p-3.5 rounded-2xl text-left flex items-center gap-3 transition-all">
+                    <span class="text-2xl sm:text-3xl">${item.icon}</span>
+                    <span class="font-bold text-slate-700 text-xs sm:text-sm">${item.text}</span>
+                </button>
+            `).join('');
+
+            stage.innerHTML = `
+                <div class="text-center mb-5">
+                    <h3 class="text-2xl sm:text-3xl font-bold text-indigo-700 mb-1">${ch.title}</h3>
+                    <p class="text-slate-600 text-sm sm:text-base font-semibold">${ch.instruction}</p>
+                    <p class="text-xs font-extrabold text-pink-500 mt-1">💡 Cara main: Klik 1 kartu transaksi, lalu klik kotak tujuan di bawah!</p>
+                </div>
+
+                <!-- Daftar Kartu Transaksi -->
+                <div id="sorter-pool" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                    ${itemsHtml}
+                </div>
+
+                <!-- Dua Kotak Tujuan -->
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="dropToBin('${leftBin.key}')" class="btn-arcade bg-gradient-to-br ${leftBin.color} text-white p-4 sm:p-6 rounded-3xl border-b-4 ${leftBin.border} text-center flex flex-col items-center justify-center min-h-[140px]">
+                        <span class="text-4xl sm:text-5xl mb-2">${leftBin.icon}</span>
+                        <span class="font-title text-base sm:text-xl tracking-wide">${leftBin.title}</span>
+                        <span class="text-xs opacity-90 font-semibold mt-1">${leftBin.sub}</span>
+                    </button>
+
+                    <button onclick="dropToBin('${rightBin.key}')" class="btn-arcade bg-gradient-to-br ${rightBin.color} text-white p-4 sm:p-6 rounded-3xl border-b-4 ${rightBin.border} text-center flex flex-col items-center justify-center min-h-[140px]">
+                        <span class="text-4xl sm:text-5xl mb-2">${rightBin.icon}</span>
+                        <span class="font-title text-base sm:text-xl tracking-wide">${rightBin.title}</span>
+                        <span class="text-xs opacity-90 font-semibold mt-1">${rightBin.sub}</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        function selectSortItem(id, target) {
+            playSound('click');
+            document.querySelectorAll('.sort-card').forEach(el => {
+                el.classList.remove('ring-4', 'ring-amber-400', 'bg-amber-50', 'scale-105');
+            });
+            const el = document.getElementById(`sort-item-${id}`);
+            if (el && !el.disabled) {
+                el.classList.add('ring-4', 'ring-amber-400', 'bg-amber-50', 'scale-105');
+                selectedSorterItem = { id, target, el };
+            }
+        }
+
+        function dropToBin(binKey) {
+            const ch = challenges[currentIdx];
+            if (!selectedSorterItem) {
+                // Pilih otomatis item pertama yang belum selesai jika user langsung klik bin
+                const remaining = ch.items.find(it => {
+                    const btn = document.getElementById(`sort-item-${it.id}`);
+                    return btn && !btn.disabled;
+                });
+                if (remaining) {
+                    selectSortItem(remaining.id, remaining.target);
+                }
+                return;
+            }
+
+            if (selectedSorterItem.target === binKey) {
+                playSound('correct');
+                score += 25;
+                updateHUD();
+                selectedSorterItem.el.disabled = true;
+                selectedSorterItem.el.classList.remove('ring-4', 'ring-amber-400', 'bg-amber-50', 'scale-105');
+                selectedSorterItem.el.classList.add('opacity-40', 'bg-emerald-100', 'border-emerald-400', 'line-through');
+                selectedSorterItem = null;
+                sortedCount++;
+
+                if (sortedCount === ch.items.length) {
+                    setTimeout(() => showFeedback(true, "Semua Transaksi Terpilah!", ch.explanation), 300);
+                }
+            } else {
+                playSound('wrong');
+                selectedSorterItem.el.classList.add('animate-shake', 'bg-rose-100', 'border-rose-400');
+                setTimeout(() => {
+                    if (selectedSorterItem) {
+                        selectedSorterItem.el.classList.remove('animate-shake', 'bg-rose-100', 'border-rose-400');
+                    }
+                }, 450);
+                deductLife();
+            }
+        }
+
+        // --- RENDER TIPE 3: PILIHAN GANDA INTERAKTIF ---
+        function renderQuizStage(ch, stage) {
+            const colors = [
+                'from-pink-500 to-rose-500 border-rose-700',
+                'from-indigo-500 to-blue-600 border-blue-800',
+                'from-amber-500 to-orange-500 border-orange-700'
+            ];
+
+            let optionsHtml = ch.options.map((opt, i) => `
+                <button onclick="checkQuizAnswer(${opt.correct})"
+                    class="btn-arcade w-full bg-gradient-to-r ${colors[i % colors.length]} text-white font-bold p-4 sm:p-5 rounded-2xl border-b-4 text-left text-sm sm:text-base flex items-center gap-3 hover:brightness-110">
+                    <span class="bg-white/25 w-8 h-8 rounded-xl flex items-center justify-center font-title shrink-0">${String.fromCharCode(65 + i)}</span>
+                    <span>${opt.text}</span>
+                </button>
+            `).join('');
+
+            stage.innerHTML = `
+                <div class="text-center mb-6">
+                    <div class="text-5xl mb-3 animate-bounce">${ch.icon}</div>
+                    <span class="bg-amber-100 text-amber-800 font-extrabold text-xs px-3 py-1 rounded-full border border-amber-300">${ch.badge}</span>
+                    <h3 class="text-xl sm:text-2xl font-bold text-slate-800 mt-3 leading-snug">${ch.question}</h3>
+                </div>
+                <div class="space-y-3.5 max-w-2xl mx-auto">
+                    ${optionsHtml}
+                </div>
+            `;
+        }
+
+        function checkQuizAnswer(isCorrect) {
+            const ch = challenges[currentIdx];
+            if (isCorrect) {
+                playSound('correct');
+                score += 100;
+                updateHUD();
+                showFeedback(true, "Analisis Tepat!", ch.explanation);
+            } else {
+                playSound('wrong');
+                deductLife();
+                showFeedback(false, "Kurang Tepat!", "Coba perhatikan kembali prinsip & konsep pengelolaan keuangan pada Buku Saku ya!");
+            }
+        }
+
+        // --- RENDER TIPE 4: KALKULATOR SIMULASI BISNIS ---
+        function renderCalculatorStage(ch, stage) {
+            let choicesHtml = ch.choices.map(val => `
+                <button onclick="checkCalcAnswer('${val}')"
+                    class="btn-arcade bg-gradient-to-b from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-title text-lg sm:text-xl py-4 px-4 rounded-2xl border-b-4 border-indigo-800">
+                    ${val}
+                </button>
+            `).join('');
+
+            stage.innerHTML = `
+                <div class="text-center mb-5">
+                    <div class="text-5xl mb-2 animate-float">${ch.icon}</div>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-indigo-700">${ch.title}</h3>
+                </div>
+
+                <!-- Kotak Studi Kasus -->
+                <div class="bg-gradient-to-br from-amber-50 to-yellow-100 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 mb-5 text-slate-800 text-sm sm:text-base leading-relaxed shadow-inner">
+                    <p>${ch.story}</p>
+                    <div class="mt-3 inline-block bg-white/90 text-amber-800 font-extrabold text-xs sm:text-sm px-3 py-1.5 rounded-xl border border-amber-300">
+                        📐 Rumus: ${ch.formulaHint}
+                    </div>
+                </div>
+
+                <h4 class="text-center font-bold text-lg sm:text-xl text-slate-800 mb-4">${ch.question}</h4>
+
+                <div class="grid grid-cols-2 gap-3 sm:gap-4 max-w-xl mx-auto">
+                    ${choicesHtml}
+                </div>
+            `;
+        }
+
+        function checkCalcAnswer(val) {
+            const ch = challenges[currentIdx];
+            if (val === ch.correctAnswer) {
+                playSound('correct');
+                score += 120;
+                updateHUD();
+                showFeedback(true, "Hitungan Akurat! 🧮", ch.explanation);
+            } else {
+                playSound('wrong');
+                deductLife();
+                showFeedback(false, "Hitungan Meleset!", `Coba gunakan rumus: ${ch.formulaHint}. Perhatikan angka pada soal dengan teliti!`);
+            }
+        }
+
+        // --- RENDER TIPE 5: STUDI KASUS FINAL (DAPUR SEHAT) ---
+        function renderCaseStudyStage(ch, stage) {
+            let rowsHtml = ch.questions.map((q, idx) => `
+                <div class="bg-slate-50 p-3.5 rounded-2xl border-2 border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label class="font-bold text-slate-700 text-sm sm:text-base">${q.label}</label>
+                    <select id="cs-select-${idx}" class="bg-white border-2 border-indigo-300 rounded-xl px-3 py-2 font-bold text-indigo-700 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">-- Pilih Jawaban --</option>
+                        ${q.options.map(o => `<option value="${o}">${o}</option>`).join('')}
+                    </select>
+                </div>
+            `).join('');
+
+            stage.innerHTML = `
+                <div class="text-center mb-4">
+                    <span class="bg-emerald-100 text-emerald-800 font-extrabold text-xs px-3 py-1 rounded-full border border-emerald-300">🏆 BOSS CHALLENGE</span>
+                    <h3 class="text-2xl sm:text-3xl font-bold text-indigo-700 mt-1">${ch.title}</h3>
+                </div>
+
+                <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-2xl p-4 mb-5 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    ${ch.story}
+                </div>
+
+                <div class="space-y-3 mb-6">
+                    ${rowsHtml}
+                </div>
+
+                <button onclick="checkCaseStudy()" class="btn-arcade w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-title text-xl py-3.5 rounded-2xl border-b-4 border-teal-800">
+                    ✅ Periksa Laporan Dapur Sehat
+                </button>
+            `;
+        }
+
+        function checkCaseStudy() {
+            const ch = challenges[currentIdx];
+            let allFilled = true;
+            let allCorrect = true;
+
+            ch.questions.forEach((q, idx) => {
+                const val = document.getElementById(`cs-select-${idx}`).value;
+                if (!val) allFilled = false;
+                if (val !== q.answer) allCorrect = false;
+            });
+
+            if (!allFilled) {
+                playSound('wrong');
+                showFeedback(false, "Belum Lengkap!", "Silakan pilih jawaban untuk ketiga perhitungan Dapur Sehat terlebih dahulu!");
+                return;
+            }
+
+            if (allCorrect) {
+                playSound('correct');
+                score += 200;
+                updateHUD();
+                showFeedback(true, "Laporan Keuangan Valid! 🎉", ch.explanation);
+            } else {
+                playSound('wrong');
+                deductLife();
+                showFeedback(false, "Ada Angka yang Belum Tepat", "Petunjuk: Jumlahkan semua pengeluaran (Bahan + Kemasan + Transport + Promosi + Es/Alat) untuk mendapat Total Kas Keluar!");
+            }
+        }
+
+        // ==========================================
+        // 5. FEEDBACK & TRANSISI LEVEL
+        // ==========================================
+        let isLastFeedbackSuccess = false;
+
+        function deductLife() {
+            if (lives > 1) {
+                lives--;
+                updateHUD();
+            } else {
+                lives = 0;
+                updateHUD();
+            }
+        }
+
+        function showFeedback(success, title, desc) {
+            isLastFeedbackSuccess = success;
+            const overlay = document.getElementById('feedback-overlay');
+            const card = document.getElementById('feedback-card');
+            const btn = document.getElementById('fb-next-btn');
+
+            document.getElementById('fb-icon').innerText = success ? '🎉' : '🤔';
+            document.getElementById('fb-title').innerText = title;
+            document.getElementById('fb-title').className = success
+                ? 'text-2xl font-bold mb-2 text-emerald-600'
+                : 'text-2xl font-bold mb-2 text-rose-600';
+            document.getElementById('fb-desc').innerText = desc;
+
+            card.className = success
+                ? 'bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl border-4 border-emerald-400 animate-pop'
+                : 'bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl border-4 border-rose-400 animate-pop';
+
+            btn.innerText = success ? 'Lanjut Misi ➡️' : 'Coba Lagi 💪';
+            btn.className = success
+                ? 'btn-arcade w-full bg-emerald-500 hover:bg-emerald-600 text-white font-title text-lg py-3 rounded-2xl border-b-4 border-emerald-700'
+                : 'btn-arcade w-full bg-rose-500 hover:bg-rose-600 text-white font-title text-lg py-3 rounded-2xl border-b-4 border-rose-700';
+
+            overlay.classList.remove('hidden');
+        }
+
+        function nextChallenge() {
+            playSound('click');
+            document.getElementById('feedback-overlay').classList.add('hidden');
+
+            if (!isLastFeedbackSuccess) {
+                // Tetap di tantangan yang sama agar siswa bisa memperbaiki
+                return;
+            }
+
+            currentIdx++;
+            if (currentIdx < challenges.length) {
+                renderChallenge();
+            } else {
+                finishGame();
+            }
+        }
+
+        function finishGame() {
+            playSound('win');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('hud-stats').classList.add('hidden');
+            document.getElementById('screen-result').classList.remove('hidden');
+
+            // Bonus nyawa tersisa
+            const finalTotal = score + (lives * 50);
+            document.getElementById('final-score').innerText = finalTotal;
+
+            let rank = "Wirausahawan Pemula 🌱";
+            if (finalTotal >= 950) {
+                rank = "Predikat: Sultan Cuan & CEO Andal 👑";
+            } else if (finalTotal >= 750) {
+                rank = "Predikat: Manajer Keuangan Cerdas 🌟";
+            } else {
+                rank = "Predikat: Pengusaha Muda Tangguh 🚀";
+            }
+            document.getElementById('final-rank').innerText = rank;
+
+            // Efek Confetti Perayaan
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
